@@ -1,0 +1,248 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guess the BPM</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: black;
+            color: white;
+            text-align: center;
+        }
+        .game-container {
+            background: #000000;
+            border: 1px solid white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 15px rgba(255, 255, 255, 0.1);
+            width: 90%;
+            max-width: 400px;
+        }
+        h1 {
+            color: white;
+            font-size: 1.8rem;
+        }
+        p {
+            color: white;
+            font-size: 1rem;
+            margin-bottom: 20px;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid white;
+            background-color: black;
+            color: white;
+            border-radius: 5px;
+            margin: 10px 0;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            background-color: white;
+            color: black;
+            border: 1px solid white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s, color 0.3s;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: black;
+            color: white;
+        }
+        .slider-container {
+            margin: 20px 0;
+        }
+        .slider {
+            position: relative;
+            width: 100%;
+            height: 5px;
+            background: white;
+            border-radius: 5px;
+        }
+        .thumb {
+            position: absolute;
+            top: -6px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border: 2px solid black;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .result {
+            margin-top: 20px;
+            font-size: 1rem;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Guess the BPM!</h1>
+        <p>I have a tempo in mind. Can you guess its BPM?</p>
+        <div class="slider-container">
+            <div class="slider" id="slider">
+                <div class="thumb" id="thumbMin" style="left: 0;"></div>
+                <div class="thumb" id="thumbMax" style="left: 100%;"></div>
+            </div>
+            <p>Range: <span id="rangeLabel">30 - 300</span> BPM</p>
+        </div>
+        <input type="number" id="guess" placeholder="Enter your guess" onkeydown="handleKeyPress(event)" />
+        <button onclick="startGame()">Start Game</button>
+        <button onclick="stopMetronome()">Stop Metronome</button>
+        <button onclick="resetGame()">Play Again</button>
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        let targetBPM;
+        let metronomeInterval;
+        let isMetronomeRunning = false;
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const slider = document.getElementById('slider');
+        const thumbMin = document.getElementById('thumbMin');
+        const thumbMax = document.getElementById('thumbMax');
+        const rangeLabel = document.getElementById('rangeLabel');
+        let minBPM = 30;
+        let maxBPM = 300;
+
+        function updateRangeLabel() {
+            rangeLabel.textContent = `${minBPM} - ${maxBPM}`;
+        }
+
+        thumbMin.onmousedown = function (event) {
+            const shiftX = event.clientX - thumbMin.getBoundingClientRect().left;
+
+            function onMouseMove(event) {
+                let newLeft = event.clientX - shiftX - slider.getBoundingClientRect().left;
+                newLeft = Math.max(0, Math.min(newLeft, thumbMax.offsetLeft - 10));
+                thumbMin.style.left = newLeft + 'px';
+                minBPM = Math.round((newLeft / slider.offsetWidth) * 270) + 30;
+                updateRangeLabel();
+            }
+
+            document.addEventListener('mousemove', onMouseMove);
+
+            document.onmouseup = function () {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.onmouseup = null;
+            };
+        };
+
+        thumbMax.onmousedown = function (event) {
+            const shiftX = event.clientX - thumbMax.getBoundingClientRect().left;
+
+            function onMouseMove(event) {
+                let newLeft = event.clientX - shiftX - slider.getBoundingClientRect().left;
+                newLeft = Math.max(thumbMin.offsetLeft + 10, Math.min(newLeft, slider.offsetWidth));
+                thumbMax.style.left = newLeft + 'px';
+                maxBPM = Math.round((newLeft / slider.offsetWidth) * 270) + 30;
+                updateRangeLabel();
+            }
+
+            document.addEventListener('mousemove', onMouseMove);
+
+            document.onmouseup = function () {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.onmouseup = null;
+            };
+        };
+
+        thumbMin.ondragstart = thumbMax.ondragstart = function () {
+            return false;
+        };
+
+        function generateBPM() {
+            return Math.floor(Math.random() * (maxBPM - minBPM + 1)) + minBPM;
+        }
+
+        function startGame() {
+            targetBPM = generateBPM();
+            document.getElementById('result').textContent = "Game started! Guess the BPM.";
+            startMetronome();
+        }
+
+        function checkGuess() {
+            const userGuess = parseInt(document.getElementById('guess').value);
+            const resultElement = document.getElementById('result');
+
+            if (isNaN(userGuess)) {
+                resultElement.textContent = "Please enter a valid number!";
+                return;
+            }
+
+            if (userGuess === targetBPM) {
+                resultElement.textContent = `🎉 Correct! The BPM was ${targetBPM}! Metronome will stop after 2 more beats.`;
+                continueMetronomeForTwoBeats();
+            } else if (userGuess > targetBPM) {
+                resultElement.textContent = "Too high! Try a lower BPM.";
+            } else {
+                resultElement.textContent = "Too low! Try a higher BPM.";
+            }
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                checkGuess();
+            }
+        }
+
+        function startMetronome() {
+            stopMetronome(); // Stop any existing metronome
+            const interval = 60000 / targetBPM; // Calculate interval in milliseconds
+            metronomeInterval = setInterval(() => {
+                playClick();
+            }, interval);
+            isMetronomeRunning = true;
+        }
+
+        function playClick() {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.type = 'square';
+            oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // Lower frequency for the click
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime); // Volume of the click
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.05); // Short beep
+        }
+
+        function stopMetronome() {
+            clearInterval(metronomeInterval);
+            isMetronomeRunning = false;
+        }
+
+        function resetGame() {
+            stopMetronome();
+            document.getElementById('guess').value = "";
+            document.getElementById('result').textContent = "Game reset! Press Start to play again.";
+        }
+
+        function continueMetronomeForTwoBeats() {
+            if (isMetronomeRunning) {
+                setTimeout(() => {
+                    stopMetronome();
+                    document.getElementById('result').textContent += " Metronome stopped.";
+                }, (60000 / targetBPM) * 2); // Wait for 2 beats
+            }
+        }
+    </script>
+</body>
+</html>
