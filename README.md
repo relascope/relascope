@@ -6,7 +6,7 @@ About Me?
 https://www.DoJoy.at
 
 My music?
-http://youtube.com/@relascope
+[http://youtube.com/@relascope](https://www.youtube.com/@gurudojoy)
 
 <!--
 **relascope/relascope** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
