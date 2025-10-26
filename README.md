@@ -1,12 +1,12 @@
 ## Hi there, 
 
-...currently working on ChordOla! (realtime chord recognition) for MacOS
+...currently working on ChordOla! (real-time chord recognition) for MacOS
 
 About Me?
 https://www.DoJoy.at
 
 My music?
-https://www.youtube.com/@gurudojoy
+https://www.youtube.com/@dojoymusic
 
 <!--
 **relascope/relascope** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
